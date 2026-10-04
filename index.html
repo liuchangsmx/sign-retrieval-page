@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kinematic Sign Retrieval</title>
+<meta name="description" content="Kinematics-Centric Continuous Sign Language Retrieval with Gloss-Guided Boundary-Aware Alignment (ACM MM 2026).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#f4f5f8; --surface:#ffffff; --sunk:#eceef3;
+  --ink:#151a24; --ink-2:#465063; --muted:#768093; --rule:#dce0e8;
+  --motion:#c2650f; --motion-soft:#f6e3cf;
+  --rgb:#3a6aa3; --rgb-soft:#dde7f3;
+  --gloss:#b3303b; --gloss-soft:#f5dadd;
+  --text:#467f37;
+  --bar:#b7bfcc; --plate:#ffffff;
+  --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --sans:"IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0e1219; --surface:#161b25; --sunk:#1d2330;
+    --ink:#e7eaf0; --ink-2:#b0b8c6; --muted:#858e9f; --rule:#2a3141;
+    --motion:#eb9a4c; --motion-soft:#3a2a1a;
+    --rgb:#7ea8dd; --rgb-soft:#1d2a3d;
+    --gloss:#e2727c; --gloss-soft:#3a2024;
+    --text:#8cc47a;
+    --bar:#4a5366; --plate:#f3f4f6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0e1219; --surface:#161b25; --sunk:#1d2330;
+  --ink:#e7eaf0; --ink-2:#b0b8c6; --muted:#858e9f; --rule:#2a3141;
+  --motion:#eb9a4c; --motion-soft:#3a2a1a;
+  --rgb:#7ea8dd; --rgb-soft:#1d2a3d;
+  --gloss:#e2727c; --gloss-soft:#3a2024;
+  --text:#8cc47a;
+  --bar:#4a5366; --plate:#f3f4f6;
+  color-scheme: dark;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:20px}
+h1,h2,h3{font-family:var(--display);font-weight:700;line-height:1.12;text-wrap:balance;margin:0}
+h2{font-size:clamp(1.6rem,3.4vw,2.2rem);letter-spacing:-.01em}
+h3{font-size:1.15rem;font-weight:600;letter-spacing:0}
+p{margin:0}
+a{color:inherit}
+.prose{max-width:68ch;color:var(--ink-2)}
+.prose p+p{margin-top:.9em}
+.prose strong{color:var(--ink);font-weight:600}
+.eyebrow{font:500 .74rem/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.m{color:var(--motion)} .r{color:var(--rgb)} .g{color:var(--gloss)} .t{color:var(--text)}
+:focus-visible{outline:2px solid var(--motion);outline-offset:2px;border-radius:4px}
+
+/* hero */
+header.hero{padding-block:64px 28px}
+.venue{display:inline-flex;align-items:center;gap:10px;font:500 .8rem/1 var(--mono);color:var(--ink-2);letter-spacing:.04em}
+.venue b{background:var(--ink);color:var(--ground);padding:6px 9px;border-radius:3px;font-weight:500}
+.hero h1{margin-top:22px;font-size:clamp(2.1rem,5.6vw,3.9rem);letter-spacing:-.025em;max-width:17ch}
+.hero .sub{margin-top:14px;font-family:var(--display);font-weight:500;font-size:clamp(1.15rem,2.4vw,1.55rem);color:var(--ink-2);max-width:40ch;text-wrap:balance}
+.authors{margin-top:30px;display:flex;flex-wrap:wrap;gap:4px 22px;font-size:1.02rem}
+.authors span{white-space:nowrap}
+.authors sup{font:500 .7rem var(--mono);color:var(--muted);margin-left:1px}
+.affil{margin-top:8px;display:flex;flex-wrap:wrap;gap:4px 20px;color:var(--muted);font-size:.9rem}
+.affil sup{font-family:var(--mono)}
+.links{margin-top:28px;display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;border:1px solid var(--ink);background:var(--ink);color:var(--ground);font:500 .92rem/1 var(--sans);text-decoration:none;cursor:pointer}
+.btn:hover{background:transparent;color:var(--ink)}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.ghost:hover{background:var(--ink);color:var(--ground)}
+.btn[aria-disabled="true"]{border-style:dashed;border-color:var(--muted);background:transparent;color:var(--muted);cursor:default}
+.btn svg{width:16px;height:16px}
+
+/* sections */
+section{padding-block:56px}
+section+section{border-top:1px solid var(--rule)}
+.sec-head{display:flex;flex-direction:column;gap:10px;margin-bottom:26px}
+.stage{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:22px}
+.figure{margin:0}
+.figure .plate{background:var(--plate);border-radius:8px;padding:10px;overflow:hidden}
+.figure img{display:block;width:100%;height:auto}
+.figure figcaption{margin-top:10px;color:var(--muted);font-size:.88rem;max-width:80ch}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:22px}
+
+/* controls */
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:16px}
+.seg{display:inline-flex;background:var(--sunk);border-radius:8px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:var(--ink-2);font:500 .84rem/1 var(--sans);padding:8px 12px;border-radius:6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.ctl-label{font:500 .72rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* hero explorer */
+.explorer{margin-top:40px}
+.explorer-top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}
+.align-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:26px;margin-top:14px}
+.align-panel{margin:0;display:flex;flex-direction:column;gap:8px}
+.align-panel figcaption{font:500 .9rem/1 var(--sans);color:var(--ink-2)}
+.align-panel figcaption b{color:var(--ink);font-weight:600}
+.align-panel.ours figcaption b{color:var(--motion)}
+.align-panel p{color:var(--ink-2);font-size:.9rem;max-width:56ch}
+.align-caption{margin-top:16px;color:var(--muted);font-size:.85rem}
+svg text{font-family:var(--sans)}
+.chart{width:100%;overflow-x:auto}
+.chart svg{display:block}
+
+/* abstract / contributions */
+.contrib{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:26px;margin-top:36px}
+.contrib div{border-top:2px solid var(--c);padding-top:14px}
+.contrib h3{margin-bottom:6px}
+.contrib p{color:var(--ink-2);font-size:.94rem}
+
+.losses{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px 30px;margin:22px 0 10px}
+.losses div{border-left:2px solid var(--rule);padding-left:14px}
+.losses dt{font:500 1rem/1.3 var(--mono);color:var(--ink);display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.losses dt span{font:400 .8rem var(--sans);color:var(--muted)}
+.losses dd{margin:6px 0 0;color:var(--ink-2);font-size:.92rem}
+
+/* stats */
+.stats{display:flex;flex-wrap:wrap;gap:14px 40px;margin-bottom:24px}
+.stat .n{font:700 2.3rem/1 var(--display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat .l{margin-top:6px;color:var(--muted);font-size:.85rem;max-width:22ch}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;margin-top:18px}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font:500 .72rem/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+tr.ours td{font-weight:600;color:var(--ink);background:var(--motion-soft)}
+td.best{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+details summary{cursor:pointer;color:var(--ink-2);font-size:.9rem;margin-top:14px}
+
+/* matrix demo */
+.mx-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px;align-items:start}
+@media (max-width:760px){.mx-layout{grid-template-columns:1fr}}
+.range{display:flex;align-items:center;gap:10px;font:500 .84rem var(--mono);color:var(--ink-2)}
+.range input{accent-color:var(--motion);width:150px}
+.loss-read{font:500 .9rem var(--mono);color:var(--ink-2);margin-top:10px}
+.loss-read b{color:var(--ink);font-weight:500}
+
+/* cases */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--rule);margin-bottom:20px;overflow-x:auto}
+.tabs button{border:0;background:transparent;color:var(--muted);font:500 .92rem var(--sans);padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--motion)}
+.case{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:18px;margin-top:6px}
+.case .q{font-size:1.08rem;color:var(--ink)}
+.case .lbl{font:500 .7rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;display:flex;gap:6px;align-items:center}
+.case .wrong{color:var(--ink-2);text-decoration:line-through;text-decoration-color:var(--gloss);text-decoration-thickness:1.5px}
+.pill{display:inline-block;font:500 .72rem/1 var(--mono);padding:5px 8px;border-radius:999px}
+.pill.win{background:var(--motion-soft);color:var(--motion)}
+.pill.lose{background:var(--rgb-soft);color:var(--rgb)}
+.pager{display:flex;align-items:center;gap:10px;margin-top:20px;font:500 .85rem var(--mono);color:var(--muted)}
+.pager button{border:1px solid var(--rule);background:var(--surface);color:var(--ink);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1rem}
+
+pre.bib{background:var(--sunk);border-radius:8px;padding:18px;overflow-x:auto;font:400 .84rem/1.6 var(--mono);color:var(--ink);margin:0}
+.bib-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+footer{padding-block:36px 56px;border-top:1px solid var(--rule);color:var(--muted);font-size:.86rem}
+
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--ground);font:500 .8rem/1.4 var(--sans);padding:7px 10px;border-radius:6px;z-index:10;max-width:260px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.84rem;color:var(--ink-2);margin-bottom:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.note{color:var(--muted);font-size:.85rem;margin-top:10px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="tip" id="tip" hidden></div>
+
+<header class="hero wrap">
+  <div class="venue"><b>ACM MM 2026</b> Rio de Janeiro · November 10–14</div>
+  <h1>Kinematics-Centric Continuous Sign Language Retrieval</h1>
+  <p class="sub">with Gloss-Guided Boundary-Aware Alignment</p>
+  <div class="authors">
+    <span>Chang Liu<sup>1</sup></span>
+    <span>Ke Han<sup>1,✉</sup></span>
+    <span>Davide Talon<sup>2</sup></span>
+    <span>Elisa Ricci<sup>1,2</sup></span>
+    <span>Nicu Sebe<sup>1</sup></span>
+  </div>
+  <div class="affil">
+    <span><sup>1</sup> University of Trento</span>
+    <span><sup>2</sup> Fondazione Bruno Kessler</span>
+    <span><sup>✉</sup> Corresponding author</span>
+  </div>
+  <div class="links">
+    <a class="btn" href="https://doi.org/10.1145/3767308.3835973" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9 1.5V5h4M6 8.5h5M6 11h5"/></svg>Paper</a>
+    <a class="btn ghost" href="#bibtex">BibTeX</a>
+  </div>
+
+  <div class="explorer stage">
+    <span class="eyebrow">How a sentence is grounded</span>
+    <div class="align-grid">
+      <figure class="align-panel">
+        <figcaption><b>Sequence-level</b> · typical of prior work</figcaption>
+        <div class="chart" id="align-global"></div>
+        <p>Alignment is learned mainly between the whole sentence and the whole sign sequence. Without explicit gloss boundaries, which stretch of motion carries MONTH or SWIM stays ambiguous.</p>
+      </figure>
+      <figure class="align-panel ours">
+        <figcaption><b>Segment-level</b> · ours</figcaption>
+        <div class="chart" id="align-local"></div>
+        <p>Gloss spans cut the motion-token sequence into segments, and each segment is contrasted with its own gloss. Hover a gloss to see its span. Gloss order follows the signing, not the English word order.</p>
+      </figure>
+    </div>
+    <p class="align-caption">Both panels show the same CSL-Daily sentence, “I swim every day this month.”</p>
+  </div>
+</header>
+
+<main>
+<section class="wrap" id="abstract">
+  <div class="sec-head"><span class="eyebrow">Abstract</span><h2>Align sign language to text in motion space, not pixel space</h2></div>
+  <div class="prose">
+    <p>Sign language–text alignment remains a fundamental challenge for text-driven sign language understanding. Existing methods predominantly rely on appearance-heavy RGB representations, which entangle motion semantics with visual variations and lead to ambiguous motion–language grounding.</p>
+    <p>We reformulate sign language–text alignment in a structured kinematic space and propose a kinematics-centric framework that adopts <strong>3D motion parameterized by SMPL-X</strong> as the primary representation. To capture the compositional nature of sign language, we introduce a <strong>gloss-guided local alignment</strong> mechanism that uses automatically estimated gloss temporal spans to decompose continuous motion into coherent segments and establish fine-grained motion–text correspondences. We further develop a <strong>visual distillation</strong> strategy in which RGB serves as privileged supervision during training only; retrieval uses SMPL-X motion and text alone.</p>
+    <p>Our method achieves state-of-the-art bidirectional retrieval on CSL-Daily and competitive results on PHOENIX-2014T.</p>
+  </div>
+  <div class="contrib">
+    <div style="--c:var(--motion)"><h3>Kinematic representation</h3><p>Upper-body, hand and facial-expression SMPL-X parameters replace RGB as the retrieval modality: appearance-free, signer-invariant, and reusable for avatars and robotics.</p></div>
+    <div style="--c:var(--gloss)"><h3>Gloss-guided local alignment</h3><p>Gloss spans slice motion tokens into segments that are contrasted against gloss embeddings in both directions.</p></div>
+    <div style="--c:var(--rgb)"><h3>RGB as privileged supervision</h3><p>An I3D branch aligns with text and distills visual context into the motion branch, then is dropped at retrieval time.</p></div>
+  </div>
+</section>
+
+<section class="wrap" id="method">
+  <div class="sec-head"><span class="eyebrow">Method</span><h2>Four branches for training, two for retrieval</h2></div>
+  <div class="prose" style="margin-bottom:24px">
+    <p>A Movement Encoder (temporal convolution, 4× downsampling) and a Transformer turn the SMPL-X sequence into motion tokens. LaBSE token embeddings represent the sentence and each gloss. Only the <span class="t">text</span> and <span class="m">motion</span> branches are used at retrieval time.</p>
+  </div>
+  <dl class="losses">
+    <div><dt>L<sub>mt</sub> <span>motion ↔ text</span></dt><dd>The retrieval objective itself: a bidirectional InfoNCE that pulls each motion sequence toward its own sentence and away from the other sentences in the batch.</dd></div>
+    <div><dt>L<sub>g</sub> <span>motion span ↔ gloss</span></dt><dd>The same contrastive idea one level down: every gloss-bounded motion segment is matched against every gloss of the sample, in both directions, so local semantics are grounded in time.</dd></div>
+    <div><dt>L<sub>it</sub> <span>RGB ↔ text</span></dt><dd>Keeps the auxiliary RGB branch semantically meaningful, so that what it passes to the motion branch is sentence-relevant rather than arbitrary visual detail.</dd></div>
+    <div><dt>L<sub>mi</sub> <span>motion ↔ RGB</span></dt><dd>The distillation term: motion tokens are aligned with RGB tokens of the same sample, which transfers visual context into the motion representation during training.</dd></div>
+  </dl>
+  <p class="note" style="margin-bottom:24px">The four terms are summed with equal weights, all set to 1.</p>
+  <figure class="figure">
+    <div class="plate"><img src="static/img/pipeline2.jpg" alt="Framework overview: text, RGB, motion and gloss branches producing token embeddings, combined through L_mt, L_it, L_mi and the gloss-guided loss L_g." loading="lazy" width="2489" height="1331"></div>
+    <figcaption>Framework overview. Gloss spans supply local motion–language grounding, and RGB acts as privileged supervision.</figcaption>
+  </figure>
+
+  <div class="stage" style="margin-top:34px">
+    <div class="sec-head" style="margin-bottom:14px">
+      <span class="eyebrow">Try it · gloss-guided loss L<sub>g</sub></span>
+      <h3>Contrast every motion span against every gloss</h3>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Normalization direction">
+        <button type="button" id="mx-row" aria-pressed="true">Motion → Gloss (rows)</button>
+        <button type="button" id="mx-col" aria-pressed="false">Gloss → Motion (columns)</button>
+      </div>
+    </div>
+    <div class="mx-layout">
+      <div class="chart" id="mx-chart"></div>
+      <div>
+        <p class="prose" style="font-size:.94rem">Each cell is the late-interaction similarity <i>S<sub>kj</sub></i> between motion span <i>k</i> and gloss <i>j</i>. Click a row or column to see its softmax at the temperature used in the paper, τ = 0.07. The diagonal holds the correct pairs, and InfoNCE pushes their probability toward 1.</p>
+        <div class="chart" id="mx-dist" style="margin-top:14px"></div>
+        <p class="loss-read" id="mx-loss"></p>
+        <p class="note">The similarity values here are illustrative, not taken from the trained model.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="results">
+  <div class="sec-head"><span class="eyebrow">Results</span><h2>State of the art on CSL-Daily, using motion alone at retrieval</h2></div>
+  <div class="stats">
+    <div class="stat"><div class="n m">87.1</div><div class="l">T2V R@1 on CSL-Daily (SEDS: 85.8)</div></div>
+    <div class="stat"><div class="n m">87.0</div><div class="l">V2T R@1 on CSL-Daily (SEDS: 85.4)</div></div>
+    <div class="stat"><div class="n">+27.9</div><div class="l">M2T R@1 over SiCLIP, the strongest SMPL-X baseline</div></div>
+  </div>
+  <div class="stage">
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Dataset" id="res-ds">
+        <button type="button" data-v="csl" aria-pressed="true">CSL-Daily</button>
+        <button type="button" data-v="phx" aria-pressed="false">PHOENIX-2014T</button>
+      </div>
+      <div class="seg" role="group" aria-label="Direction" id="res-dir">
+        <button type="button" data-v="t2v" aria-pressed="true">Text → Sign</button>
+        <button type="button" data-v="v2t" aria-pressed="false">Sign → Text</button>
+      </div>
+      <div class="seg" role="group" aria-label="Metric" id="res-k">
+        <button type="button" data-v="0" aria-pressed="true">R@1</button>
+        <button type="button" data-v="1" aria-pressed="false">R@5</button>
+        <button type="button" data-v="2" aria-pressed="false">R@10</button>
+      </div>
+    </div>
+    <div class="chart" id="res-chart"></div>
+    <p class="note" id="res-note"></p>
+    <details>
+      <summary>Full table</summary>
+      <div class="tbl-wrap"><table id="res-table"></table></div>
+    </details>
+  </div>
+</section>
+
+<section class="wrap" id="invariance">
+  <div class="sec-head"><span class="eyebrow">Analysis</span><h2>SMPL-X embeddings group by meaning, not by signer</h2></div>
+  <div class="prose" style="margin-bottom:24px"><p>On the CSL-Daily test split, we compare sign-side embeddings from the SEDS RGB branch with those from our SMPL-X branch. The same sentence signed by different people should look alike, and different sentences from the same signer should not.</p></div>
+  <div class="grid2">
+    <div class="stage">
+      <h3 style="margin-bottom:4px">Mean cosine similarity</h3>
+      <div class="legend"><span><i style="background:var(--rgb)"></i>RGB (SEDS)</span><span><i style="background:var(--motion)"></i>SMPL-X (ours)</span></div>
+      <div class="chart" id="inv-chart"></div>
+    </div>
+    <div class="stage">
+      <h3 style="margin-bottom:4px">Take the extra signers away, and RGB loses more</h3>
+      <p style="color:var(--ink-2);font-size:.92rem;margin-bottom:10px">Training on one video per sentence costs the RGB baseline 11.0 R@1 but costs us 9.1, so less of our accuracy was resting on seeing the same sentence signed by several people.</p>
+      <div class="controls" style="margin-bottom:6px">
+        <div class="seg" role="group" aria-label="Direction" id="red-dir">
+          <button type="button" data-v="0" aria-pressed="true">T2V R@1</button>
+          <button type="button" data-v="1" aria-pressed="false">V2T R@1</button>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--ink-2);border-radius:50%"></i>Full training</span><span><i style="background:transparent;border:2px solid var(--ink-2);border-radius:50%"></i>One signer per sentence</span></div>
+      <div class="chart" id="red-chart"></div>
+      <p class="note">CSL-Daily, with the test set unchanged. Full numbers: SEDS 78.4 → 67.4 (T2V), ours 87.1 → 78.0.</p>
+    </div>
+  </div>
+  <figure class="figure" style="margin-top:22px">
+    <div class="plate"><img src="static/img/heatmap.png" alt="Intra-modal cosine similarity matrices: SMPL-X embeddings from ours show clean 2x2 diagonal blocks; SEDS video embeddings show high off-block similarity." loading="lazy" width="4309" height="1898"></div>
+    <figcaption>Similarity matrices for 16 test samples ordered by sentence (S…) and signer (P…). SMPL-X (left) forms clean 2×2 sentence blocks, while RGB (right) stays similar across unrelated sentences.</figcaption>
+  </figure>
+</section>
+
+<section class="wrap" id="ablation">
+  <div class="sec-head"><span class="eyebrow">Ablations &amp; robustness</span><h2>Gloss-guided alignment carries the most weight</h2></div>
+  <div class="grid2">
+    <div class="stage">
+      <h3 style="margin-bottom:10px">Component ablation, R@1</h3>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Dataset" id="abl-ds">
+          <button type="button" data-v="csl" aria-pressed="true">CSL-Daily</button>
+          <button type="button" data-v="phx" aria-pressed="false">PHOENIX-2014T</button>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--motion)"></i>Text → Motion</span><span><i style="background:var(--bar)"></i>Motion → Text</span></div>
+      <div class="chart" id="abl-chart"></div>
+    </div>
+    <div class="stage">
+      <h3 style="margin-bottom:10px">Perturbations, T2M R@1</h3>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Dataset" id="rob-ds">
+          <button type="button" data-v="csl" aria-pressed="true">CSL-Daily</button>
+          <button type="button" data-v="phx" aria-pressed="false">PHOENIX-2014T</button>
+        </div>
+      </div>
+      <div class="chart" id="rob-chart"></div>
+      <p class="note">SMPL-X noise σ = 0.1 (≈50% of the per-dimension std). Span shift: start and end moved 0–4 frames (mean gloss ≈ 8 frames).</p>
+    </div>
+  </div>
+  <div class="prose" style="margin-top:26px">
+    <p><strong>Why PHOENIX-2014T trails.</strong> Recovering SMPL-X from broadcast weather footage is noisier: median acceleration jitter is 2.43 vs. 1.47 on CSL-Daily. The worst-jitter quartile of the PHOENIX test set scores about 8–10 R@1 points below the cleaner quartiles, so kinematics-centric retrieval depends on the quality of upstream motion recovery.</p>
+  </div>
+</section>
+
+<section class="wrap" id="cases">
+  <div class="sec-head"><span class="eyebrow">Qualitative results</span><h2>Where kinematics wins, and where it slips</h2></div>
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" aria-selected="true" data-tab="t-csl" id="tab-csl">CSL-Daily · Top-1</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="t-more" id="tab-more">CSL-Daily · wins &amp; failures</button>
+  </div>
+  <div id="t-csl" role="tabpanel">
+    <figure class="figure">
+      <div class="plate"><img src="static/img/compare.jpg" alt="Four text queries with ground-truth frames, the incorrect video retrieved by SEDS, and the correct SMPL-X motion retrieved by our method." loading="lazy" width="2806" height="1103"></div>
+      <figcaption>For each text query: ground-truth frames (left), the top-1 SEDS retrieval with its paired text (middle), and our top-1 SMPL-X retrieval (right).</figcaption>
+    </figure>
+  </div>
+  <div id="t-more" role="tabpanel" hidden>
+    <figure class="figure">
+      <div class="plate"><img src="static/img/compare_s.jpg" alt="Supplementary qualitative results on CSL-Daily: cases where our method succeeds and the baseline fails, and the reverse." loading="lazy"></div>
+      <figcaption>Top: our method succeeds and the baseline fails (118 such queries on CSL-Daily vs. 58 the other way). Bottom: our failures, mostly <em>lexical salience bias</em>, for example “in advance” being matched to “ahead of schedule”.</figcaption>
+    </figure>
+  </div>
+</div>
+</section>
+
+<section class="wrap" id="bibtex">
+  <div class="bib-head"><h2>BibTeX</h2><button type="button" class="btn ghost" id="copy-bib">Copy</button></div>
+<pre class="bib" id="bib">@inproceedings{liu2026kinematics,
+  title     = {Kinematics-Centric Continuous Sign Language Retrieval
+               with Gloss-Guided Boundary-Aware Alignment},
+  author    = {Liu, Chang and Han, Ke and Talon, Davide and Ricci, Elisa and Sebe, Nicu},
+  booktitle = {Proceedings of the 34th ACM International Conference on Multimedia},
+  series    = {MM '26},
+  year      = {2026},
+  address   = {Rio de Janeiro, Brazil},
+  publisher = {ACM},
+  doi       = {10.1145/3767308.3835973}
+}</pre>
+</section>
+</main>
+
+<footer class="wrap">
+  <p>We acknowledge ISCRA for awarding this project access to the LEONARDO supercomputer, owned by the EuroHPC Joint Undertaking and hosted by CINECA (Italy). Supported by the EU Horizon projects ELIAS (No. 101120237) and ELLIOT (No. 101214398) and by the FIS project GUIDANCE (No. FIS2023-03251).</p>
+</footer>
+
+<script>
+(function(){
+const NS="http://www.w3.org/2000/svg";
+const $=s=>document.querySelector(s);
+function el(tag,attrs,parent,text){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;if(parent)parent.appendChild(e);return e;}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+const tip=$("#tip");
+function showTip(ev,html){tip.innerHTML=html;tip.hidden=false;const x=Math.min(ev.clientX+14,window.innerWidth-tip.offsetWidth-8);tip.style.left=x+"px";tip.style.top=(ev.clientY+14)+"px";}
+function hideTip(){tip.hidden=true;}
+function hover(node,html){node.addEventListener("pointermove",e=>showTip(e,html));node.addEventListener("pointerleave",hideTip);}
+function segGroup(id,cb){const g=document.getElementById(id);g.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;g.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));cb(b.dataset.v);});}
+function widthOf(id){return Math.max(300,document.getElementById(id).clientWidth);}
+const renders=[];
+
+/* ---------- 1. Hero alignment panels ---------- */
+const glosses=[{g:"MONTH",s:6,e:22},{g:"THIS",s:30,e:47},{g:"I",s:56,e:62},{g:"EVERY-DAY",s:70,e:90},{g:"SWIM",s:98,e:116}];
+const glossColor=["#5aa03c","#c98a0a","#8a5ad6","#d8552c","#1789bb"];
+function renderPanel(sel,mode){
+  const box=$(sel);if(!box)return;box.innerHTML="";
+  const W=Math.max(360,box.clientWidth),H=222,T=120,x0=10,x1=W-10;
+  const X=f=>x0+(x1-x0)*f/T;
+  const svg=el("svg",{width:W,height:H,role:"img","aria-label":mode==="local"?"Gloss spans aligned to matching motion segments":"The whole sign sequence matched to the whole sentence"},box);
+  const ink=css("--ink"),ink2=css("--ink-2"),muted=css("--muted"),rule=css("--rule");
+  el("text",{x:x0,y:14,fill:muted,"font-size":10.5,"font-family":"IBM Plex Mono, monospace"},svg,mode==="local"?"SMPL-X MOTION TOKENS, SLICED BY GLOSS SPANS":"SMPL-X MOTION TOKENS, WHOLE SEQUENCE");
+  const ty=44,spans=[];
+  for(let t=0;t<T;t+=4)el("rect",{x:X(t)+1,y:ty-12,width:Math.max(2,X(4)-X(0)-2),height:24,rx:2,fill:rule},svg);
+  if(mode==="local"){
+    glosses.forEach((d,i)=>{
+      spans.push(el("rect",{x:X(d.s),y:ty-12,width:X(d.e)-X(d.s),height:24,rx:3,fill:glossColor[i],opacity:.88},svg));
+      el("text",{x:(X(d.s)+X(d.e))/2,y:ty+26,fill:muted,"font-size":9.5,"text-anchor":"middle","font-family":"IBM Plex Mono, monospace"},svg,`${d.s}–${d.e}`);
+    });
+  }else{
+    const defs=el("defs",{},svg),lg=el("linearGradient",{id:"seqgrad"},defs);
+    glossColor.forEach((c,i)=>el("stop",{offset:(i/(glossColor.length-1)),"stop-color":c},lg));
+    el("rect",{x:X(0),y:ty-12,width:X(T)-X(0),height:24,rx:3,fill:"url(#seqgrad)",opacity:.5},svg);
+  }
+  const gy=180,n=glosses.length;
+  glosses.forEach((d,i)=>{
+    const lx=x0+(x1-x0)*(i+0.5)/n;
+    if(mode==="local"){
+      const sx=(X(d.s)+X(d.e))/2;
+      el("path",{d:`M${sx},${ty+32} C${sx},${ty+82} ${lx},${gy-74} ${lx},${gy-18}`,fill:"none",stroke:glossColor[i],"stroke-width":2,opacity:.9},svg);
+    }else{
+      const sx=X(T/2);
+      el("path",{d:`M${sx},${ty+14} C${sx},${ty+86} ${lx},${gy-70} ${lx},${gy-18}`,fill:"none",stroke:ink2,"stroke-width":1.3,"stroke-dasharray":"4 4",opacity:.75},svg);
+      el("text",{x:(sx*0.35+lx*0.65),y:gy-44,fill:ink2,"font-size":13,"font-weight":700,"text-anchor":"middle"},svg,"?");
+    }
+    el("text",{x:lx,y:gy,fill:mode==="local"?glossColor[i]:ink,"font-size":Math.min(15,W/32),"font-weight":700,"text-anchor":"middle","font-family":"Bricolage Grotesque, system-ui, sans-serif"},svg,d.g);
+    if(mode==="local"){
+      const hit=el("rect",{x:lx-(x1-x0)/n/2,y:gy-22,width:(x1-x0)/n,height:30,fill:"transparent"},svg);
+      hit.addEventListener("pointerenter",()=>spans.forEach((r,j)=>r.setAttribute("opacity",j===i?1:.15)));
+      hit.addEventListener("pointerleave",()=>spans.forEach(r=>r.setAttribute("opacity",.88)));
+      hover(hit,`<b>${d.g}</b><br>gloss span: frames ${d.s}–${d.e}`);
+    }
+  });
+  el("text",{x:x0,y:gy+24,fill:muted,"font-size":10.5,"font-family":"IBM Plex Mono, monospace"},svg,"GLOSS SEQUENCE");
+}
+function renderAlign(){renderPanel("#align-global","global");renderPanel("#align-local","local");}
+renders.push(renderAlign);
+
+/* ---------- 2. Similarity matrix / InfoNCE demo ---------- */
+const G=["HELLO","WORLD","I","HAPPY"];
+const S=[[.82,.21,.35,.48],[.40,.78,.19,.30],[.44,.26,.80,.22],[.12,.38,.29,.76]];
+let mxMode="row",mxSel=0;const tau=.07;
+function softmax(v){const m=Math.max(...v);const e=v.map(x=>Math.exp((x-m)/tau));const s=e.reduce((a,b)=>a+b,0);return e.map(x=>x/s);}
+function vecOf(i){return mxMode==="row"?S[i]:S.map(r=>r[i]);}
+function renderMx(){
+  const box=$("#mx-chart");box.innerHTML="";
+  const W=Math.min(420,Math.max(300,box.clientWidth)),pad=78,cell=(W-pad-8)/4,H=pad+cell*4+8;
+  const svg=el("svg",{width:W,height:H,role:"img","aria-label":"Similarity matrix between motion spans and glosses"},box);
+  const muted=css("--muted"),ink=css("--ink"),gloss=css("--gloss"),surface=css("--surface"),motion=css("--motion");
+  el("text",{x:pad+cell*2,y:14,"text-anchor":"middle",fill:muted,"font-size":11,"font-family":"IBM Plex Mono, monospace"},svg,"gloss embeddings j");
+  el("text",{x:12,y:pad+cell*2,"text-anchor":"middle",fill:muted,"font-size":11,"font-family":"IBM Plex Mono, monospace",transform:`rotate(-90 12 ${pad+cell*2})`},svg,"motion spans k");
+  G.forEach((g,j)=>{
+    const sel=mxMode==="col"&&mxSel===j;
+    const t=el("text",{x:pad+cell*(j+.5),y:pad-10,"text-anchor":"middle",fill:sel?ink:muted,"font-size":11,"font-weight":sel?700:500,style:"cursor:pointer"},svg,g);
+    t.addEventListener("click",()=>{mxMode="col";mxSel=j;syncMx();});
+    const t2=el("text",{x:pad-8,y:pad+cell*(j+.5)+4,"text-anchor":"end",fill:mxMode==="row"&&mxSel===j?ink:muted,"font-size":11,"font-weight":mxMode==="row"&&mxSel===j?700:500,style:"cursor:pointer"},svg,"span "+g);
+    t2.addEventListener("click",()=>{mxMode="row";mxSel=j;syncMx();});
+  });
+  for(let k=0;k<4;k++)for(let j=0;j<4;j++){
+    const v=S[k][j];
+    const r=el("rect",{x:pad+cell*j+1,y:pad+cell*k+1,width:cell-2,height:cell-2,rx:3,fill:gloss,"fill-opacity":(0.08+0.92*Math.pow(v,1.6)).toFixed(3),style:"cursor:pointer"},svg);
+    el("text",{x:pad+cell*(j+.5),y:pad+cell*(k+.5)+4,"text-anchor":"middle","font-size":12,fill:v>.6?"#fff":ink,"font-family":"IBM Plex Mono, monospace","pointer-events":"none"},svg,v.toFixed(2));
+    r.addEventListener("click",()=>{mxSel=mxMode==="row"?k:j;renderMx();renderDist();});
+    hover(r,`S<sub>${k}${j}</sub> = sim(span ${G[k]}, ${G[j]}) = ${v.toFixed(2)}`);
+  }
+  const hx=mxMode==="row"?pad:pad+cell*mxSel,hy=mxMode==="row"?pad+cell*mxSel:pad;
+  el("rect",{x:hx-1,y:hy-1,width:mxMode==="row"?cell*4+2:cell+2,height:mxMode==="row"?cell+2:cell*4+2,rx:4,fill:"none",stroke:motion,"stroke-width":2.5,"stroke-dasharray":"6 3","pointer-events":"none"},svg);
+}
+function renderDist(){
+  const box=$("#mx-dist");box.innerHTML="";
+  const v=vecOf(mxSel),p=softmax(v);
+  const W=Math.max(280,box.clientWidth),row=30,lab=74,H=row*4+22;
+  const svg=el("svg",{width:W,height:H,role:"img","aria-label":"Softmax probabilities"},box);
+  const muted=css("--muted"),ink=css("--ink"),bar=css("--bar"),motion=css("--motion"),rule=css("--rule");
+  const bw=W-lab-56;
+  el("text",{x:0,y:12,fill:muted,"font-size":11,"font-family":"IBM Plex Mono, monospace"},svg,mxMode==="row"?`p(gloss | span ${G[mxSel]})`:`p(span | gloss ${G[mxSel]})`);
+  p.forEach((q,i)=>{
+    const y=22+i*row;const pos=i===mxSel;
+    el("text",{x:lab-8,y:y+row/2+2,"text-anchor":"end",fill:pos?ink:muted,"font-size":12,"font-weight":pos?600:400},svg,(mxMode==="row"?"":"span ")+G[i]);
+    el("rect",{x:lab,y:y+5,width:bw,height:row-12,rx:3,fill:rule,"fill-opacity":.45},svg);
+    el("rect",{x:lab,y:y+5,width:Math.max(2,bw*q),height:row-12,rx:3,fill:pos?motion:bar},svg);
+    el("text",{x:lab+bw+8,y:y+row/2+2,fill:pos?ink:muted,"font-size":12,"font-family":"IBM Plex Mono, monospace"},svg,q.toFixed(3));
+  });
+  // average loss over all rows/cols in this direction
+  let L=0;for(let i=0;i<4;i++){L+=-Math.log(softmax(vecOf(i))[i]);}L/=4;
+  $("#mx-loss").innerHTML=`${mxMode==="row"?"L<sub>m→g</sub>":"L<sub>g→m</sub>"} (mean over 4) = <b>${L.toFixed(3)}</b> &nbsp;·&nbsp; −log p(correct) here = <b>${(-Math.log(p[mxSel])).toFixed(3)}</b>`;
+}
+function syncMx(){$("#mx-row").setAttribute("aria-pressed",mxMode==="row");$("#mx-col").setAttribute("aria-pressed",mxMode==="col");renderMx();renderDist();}
+$("#mx-row").addEventListener("click",()=>{mxMode="row";syncMx();});
+$("#mx-col").addEventListener("click",()=>{mxMode="col";syncMx();});
+renders.push(renderMx,renderDist);
+
+/* ---------- generic horizontal bars ---------- */
+function hbars(box,rows,opt){
+  box.innerHTML="";
+  const W=Math.max(300,box.clientWidth),lab=opt.lab||110,rowH=opt.rowH||30,top=8,H=top+rows.length*rowH+24,bw=W-lab-44;
+  const max=opt.max,min=opt.min||0,X=v=>lab+bw*(v-min)/(max-min);
+  const svg=el("svg",{width:W,height:H,role:"img","aria-label":opt.aria},box);
+  const muted=css("--muted"),ink=css("--ink"),ink2=css("--ink-2"),rule=css("--rule");
+  opt.ticks.forEach(t=>{el("line",{x1:X(t),x2:X(t),y1:top,y2:H-20,stroke:rule,"stroke-width":1},svg);el("text",{x:X(t),y:H-6,"text-anchor":"middle",fill:muted,"font-size":11,"font-family":"IBM Plex Mono, monospace"},svg,opt.tfmt?opt.tfmt(t):t);});
+  rows.forEach((r,i)=>{
+    const y=top+i*rowH;
+    if(r.label!=null)el("text",{x:lab-10,y:y+(r.span||1)*rowH/2+4,"text-anchor":"end",fill:r.strong?ink:ink2,"font-size":13,"font-weight":r.strong?600:400},svg,r.label);
+    const h=r.h||rowH-12,yy=y+(rowH-h)/2;
+    const w=Math.max(2,X(r.value)-X(min));
+    const b=el("rect",{x:X(min),y:yy,width:w,height:h,rx:3,fill:r.color},svg);
+    el("text",{x:X(min)+w+6,y:yy+h/2+4,fill:r.strong?ink:ink2,"font-size":12,"font-weight":r.strong?600:400,"font-family":"IBM Plex Mono, monospace"},svg,opt.fmt?opt.fmt(r.value):r.value);
+    const hit=el("rect",{x:0,y,width:W,height:rowH,fill:"transparent"},svg);
+    hover(hit,r.tip||`${r.label}: ${r.value}`);
+  });
+}
+
+/* ---------- 3. Main results ---------- */
+const RES={
+  csl:[["Spot-ALIGN",[34.2,48.0,52.6],[23.6,47.0,53.0]],["CiCo",[56.6,69.9,74.7],[51.6,64.8,70.1]],["UPRet",[78.4,89.1,92.0],[77.0,89.2,92.7]],["CMCM",[84.7,93.3,95.1],[79.3,90.2,92.7]],["SEDS",[85.8,94.4,95.6],[85.4,93.8,95.8]],["Ours",[87.1,95.4,96.9],[87.0,94.6,96.9]]],
+  phx:[["Spot-ALIGN",[55.8,79.6,87.2],[53.1,79.4,86.1]],["CiCo",[69.5,86.6,92.1],[70.2,88.0,92.8]],["UPRet",[72.0,89.1,94.1],[72.0,89.4,93.3]],["CMCM",[76.1,88.9,93.3],[74.5,90.2,95.1]],["SEDS",[76.8,91.7,95.3],[78.7,92.5,95.2]],["Ours",[74.1,88.1,90.6],[71.2,88.3,92.1]]]
+};
+let rs={ds:"csl",dir:"t2v",k:0};
+function renderRes(){
+  const di=rs.dir==="t2v"?1:2,K=["R@1","R@5","R@10"][rs.k];
+  const rows=RES[rs.ds].map(r=>({label:r[0],value:r[di][rs.k],strong:r[0]==="Ours"})).sort((a,b)=>b.value-a.value)
+    .map(r=>({...r,color:r.strong?css("--motion"):css("--bar"),tip:`<b>${r.label}</b><br>${rs.dir==="t2v"?"Text→Sign":"Sign→Text"} ${K}: ${r.value.toFixed(1)}`}));
+  hbars($("#res-chart"),rows,{max:100,ticks:[0,25,50,75,100],fmt:v=>v.toFixed(1),aria:"Retrieval recall by method",lab:100,rowH:34});
+  $("#res-note").textContent=rs.ds==="csl"
+    ?"On CSL-Daily we lead on every metric in both directions."
+    :"PHOENIX-2014T is broadcast footage where SMPL-X recovery is noisier. We stay competitive but trail the strongest RGB methods.";
+  const t=$("#res-table");const data=RES[rs.ds];
+  const best=[1,2].map(d=>[0,1,2].map(k=>Math.max(...data.map(r=>r[d][k]))));
+  t.innerHTML=`<thead><tr><th>Method</th><th>T2V R@1</th><th>R@5</th><th>R@10</th><th>V2T R@1</th><th>R@5</th><th>R@10</th></tr></thead><tbody>`+
+    data.map(r=>`<tr class="${r[0]==="Ours"?"ours":""}"><td>${r[0]}</td>${[1,2].map(d=>r[d].map((v,k)=>`<td class="${v===best[d-1][k]?"best":""}">${v.toFixed(1)}</td>`).join("")).join("")}</tr>`).join("")+`</tbody>`;
+}
+segGroup("res-ds",v=>{rs.ds=v;renderRes();});
+segGroup("res-dir",v=>{rs.dir=v;renderRes();});
+segGroup("res-k",v=>{rs.k=+v;renderRes();});
+renders.push(renderRes);
+
+/* ---------- 4. Signer invariance ---------- */
+function renderInv(){
+  const M=[["Same sentence, different signer","higher is better",.7798,.8975],["Different sentence, same signer","lower is better",.4137,.0448],["Different sentence, different signer","lower is better",.3651,.0041]];
+  const box=$("#inv-chart");box.innerHTML="";
+  const W=Math.max(300,box.clientWidth),gH=74,top=4,H=top+M.length*gH+24,l=4,bw=W-l-56,X=v=>l+bw*v;
+  const svg=el("svg",{width:W,height:H,role:"img","aria-label":"Signer invariance similarities"},box);
+  const muted=css("--muted"),rule=css("--rule"),ink=css("--ink"),ink2=css("--ink-2");
+  [0,.25,.5,.75,1].forEach(t=>{el("line",{x1:X(t),x2:X(t),y1:top+18,y2:H-22,stroke:rule},svg);el("text",{x:X(t),y:H-6,"text-anchor":t===0?"start":"middle",fill:muted,"font-size":11,"font-family":"IBM Plex Mono, monospace"},svg,t);});
+  M.forEach((m,i)=>{
+    const y=top+i*gH;
+    el("text",{x:l,y:y+14,fill:ink2,"font-size":12.5},svg,m[0]+" · ");
+    const tt=svg.lastChild;const tl=el("tspan",{fill:muted,"font-size":11},tt,m[1]);
+    [[m[2],"--rgb","RGB (SEDS)"],[m[3],"--motion","SMPL-X (ours)"]].forEach(([v,c,n],j)=>{
+      const yy=y+22+j*20,w=Math.max(2,X(v)-X(0));
+      el("rect",{x:X(0),y:yy,width:w,height:15,rx:3,fill:css(c)},svg);
+      el("text",{x:X(0)+w+6,y:yy+12,fill:j?ink:ink2,"font-size":12,"font-weight":j?600:400,"font-family":"IBM Plex Mono, monospace"},svg,v.toFixed(3));
+      const hit=el("rect",{x:0,y:yy-2,width:W,height:19,fill:"transparent"},svg);
+      hover(hit,`<b>${n}</b><br>${m[0]}: ${v.toFixed(4)}`);
+    });
+  });
+}
+renders.push(renderInv);
+
+/* ---------- 5. Reduced signer diversity ---------- */
+let redK=0;
+function renderRed(){
+  const box=$("#red-chart");box.innerHTML="";
+  const D=[["SEDS (RGB branch)",[78.4,77.9],[67.4,65.2],"--rgb"],["Ours (SMPL-X)",[87.1,87.0],[78.0,78.0],"--motion"]];
+  const W=Math.max(300,box.clientWidth),lab=0,top=30,rowH=74,H=top+D.length*rowH+26,x0=8,x1=W-120;
+  const lo=60,hi=90,X=v=>x0+(x1-x0)*(v-lo)/(hi-lo);
+  const svg=el("svg",{width:W,height:H,role:"img","aria-label":"R@1 with full training versus one signer per sentence"},box);
+  const muted=css("--muted"),rule=css("--rule"),ink=css("--ink"),ink2=css("--ink-2");
+  for(let t=lo;t<=hi;t+=10){el("line",{x1:X(t),x2:X(t),y1:top,y2:H-24,stroke:rule},svg);el("text",{x:X(t),y:H-8,"text-anchor":"middle",fill:muted,"font-size":11,"font-family":"IBM Plex Mono, monospace"},svg,t);}
+  el("text",{x:x0,y:14,fill:muted,"font-size":10.5,"font-family":"IBM Plex Mono, monospace"},svg,(redK?"V2T":"T2V")+" R@1 ON CSL-DAILY");
+  D.forEach((d,i)=>{
+    const full=d[1][redK],red=d[2][redK],c=css(d[3]),drop=full-red;
+    const y=top+i*rowH+26;
+    el("text",{x:x0,y:y-16,fill:ink,"font-size":13,"font-weight":600},svg,d[0]);
+    el("line",{x1:X(red),x2:X(full),y1:y,y2:y,stroke:c,"stroke-width":9,opacity:.28,"stroke-linecap":"round"},svg);
+    const dr=el("circle",{cx:X(red),cy:y,r:6,fill:css("--surface"),stroke:c,"stroke-width":2.5},svg);
+    const df=el("circle",{cx:X(full),cy:y,r:6,fill:c},svg);
+    hover(dr,`<b>${d[0]}</b><br>one signer per sentence: ${red.toFixed(1)}`);
+    hover(df,`<b>${d[0]}</b><br>full training: ${full.toFixed(1)}`);
+    el("text",{x:X(red)-10,y:y+4,"text-anchor":"end",fill:ink2,"font-size":11.5,"font-family":"IBM Plex Mono, monospace"},svg,red.toFixed(1));
+    el("text",{x:X(full)+12,y:y+4,fill:ink2,"font-size":11.5,"font-family":"IBM Plex Mono, monospace"},svg,full.toFixed(1));
+    el("text",{x:x1+22,y:y-2,fill:c,"font-size":15,"font-weight":700,"font-family":"Bricolage Grotesque, system-ui, sans-serif"},svg,`−${drop.toFixed(1)}`);
+    el("text",{x:x1+22,y:y+13,fill:muted,"font-size":10.5,"font-family":"IBM Plex Mono, monospace"},svg,`${(drop/full*100).toFixed(1)}%`);
+  });
+}
+segGroup("red-dir",v=>{redK=+v;renderRed();});
+renders.push(renderRed);
+
+/* ---------- 6. Ablation ---------- */
+const ABL={csl:[["Full model",87.09,86.99],["No I3D",83.71,85.63],["No MOVE",80.58,81.38],["No Gloss",68.55,67.68]],
+           phx:[["Full model",74.13,71.18],["No I3D",72.54,68.69],["No MOVE",66.98,66.82],["No Gloss",48.73,47.98]]};
+let ablDs="csl";
+function renderAbl(){
+  const rows=[];const base=ABL[ablDs][0];
+  ABL[ablDs].forEach((r,i)=>{
+    const d1=i?` (${(r[1]-base[1]).toFixed(2)})`:"",d2=i?` (${(r[2]-base[2]).toFixed(2)})`:"";
+    rows.push({label:r[0],span:2,value:r[1],color:css("--motion"),h:13,strong:i===0,tip:`<b>${r[0]}</b><br>Text→Motion R@1: ${r[1].toFixed(2)}${d1}`});
+    rows.push({label:null,value:r[2],color:css("--bar"),h:13,tip:`<b>${r[0]}</b><br>Motion→Text R@1: ${r[2].toFixed(2)}${d2}`});
+  });
+  hbars($("#abl-chart"),rows,{max:100,min:0,ticks:[0,25,50,75,100],fmt:v=>v.toFixed(1),aria:"Ablation R@1",lab:92,rowH:17});
+}
+segGroup("abl-ds",v=>{ablDs=v;renderAbl();});
+renders.push(renderAbl);
+
+/* ---------- 7. Robustness dot plot ---------- */
+const ROB={csl:[["Clean",87.09],["SMPL-X noise · train",85.84],["SMPL-X noise · test",87.34],["Span shift ±0–4",87.47],["20% span drop",86.97],["30% span drop",86.22]],
+           phx:[["Clean",74.13],["SMPL-X noise · train",73.17],["SMPL-X noise · test",73.17],["Span shift ±0–4",72.86],["20% span drop",73.65],["30% span drop",72.06]]};
+let robDs="csl";
+function renderRob(){
+  const box=$("#rob-chart");box.innerHTML="";
+  const data=ROB[robDs],clean=data[0][1];
+  const lo=Math.floor(clean-6),hi=Math.ceil(clean+3);
+  const W=Math.max(300,box.clientWidth),lab=150,rowH=32,top=6,H=top+data.length*rowH+26,bw=W-lab-60;
+  const X=v=>lab+bw*(v-lo)/(hi-lo);
+  const svg=el("svg",{width:W,height:H,role:"img","aria-label":"R@1 under perturbations"},box);
+  const muted=css("--muted"),rule=css("--rule"),ink=css("--ink"),ink2=css("--ink-2"),m=css("--motion");
+  for(let t=lo;t<=hi;t+=((hi-lo)>8?2:1)){el("line",{x1:X(t),x2:X(t),y1:top,y2:H-22,stroke:rule},svg);el("text",{x:X(t),y:H-6,"text-anchor":"middle",fill:muted,"font-size":11,"font-family":"IBM Plex Mono, monospace"},svg,t);}
+  el("line",{x1:X(clean),x2:X(clean),y1:top,y2:H-22,stroke:m,"stroke-dasharray":"3 3","stroke-width":1.5},svg);
+  data.forEach((d,i)=>{
+    const y=top+i*rowH+rowH/2;
+    el("text",{x:lab-10,y:y+4,"text-anchor":"end",fill:i?ink2:ink,"font-size":13,"font-weight":i?400:600},svg,d[0]);
+    if(i)el("line",{x1:X(clean),x2:X(d[1]),y1:y,y2:y,stroke:css("--bar"),"stroke-width":2},svg);
+    const c=el("circle",{cx:X(d[1]),cy:y,r:5.5,fill:i?css("--ink-2"):m,stroke:css("--surface"),"stroke-width":2},svg);
+    const delta=d[1]-clean;
+    el("text",{x:Math.max(X(d[1]),X(clean))+10,y:y+4,fill:i?ink2:ink,"font-size":11,"font-family":"IBM Plex Mono, monospace"},svg,i?(delta>=0?"+":"")+delta.toFixed(2):d[1].toFixed(2));
+    const hit=el("rect",{x:0,y:y-rowH/2,width:W,height:rowH,fill:"transparent"},svg);
+    hover(hit,`<b>${d[0]}</b><br>T2M R@1: ${d[1].toFixed(2)}`);
+  });
+}
+segGroup("rob-ds",v=>{robDs=v;renderRob();});
+renders.push(renderRob);
+
+/* ---------- 8. Tabs + PHOENIX cases ---------- */
+document.querySelectorAll('[role="tab"]').forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll('[role="tab"]').forEach(x=>{x.setAttribute("aria-selected",x===b);document.getElementById(x.dataset.tab).hidden=x!==b;});
+}));
+
+/* ---------- BibTeX copy ---------- */
+$("#copy-bib").addEventListener("click",async()=>{
+  const b=$("#copy-bib");
+  try{await navigator.clipboard.writeText($("#bib").textContent);b.textContent="Copied";}
+  catch(e){const r=document.createRange();r.selectNodeContents($("#bib"));const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent="Selected, press Ctrl+C";}
+  setTimeout(()=>b.textContent="Copy",1800);
+});
+
+/* ---------- render + theme/resize ---------- */
+function all(){renders.forEach(f=>f());}
+all();
+let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(all,120);});
+new MutationObserver(all).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",all);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(all);
+})();
+</script>
+</body>
+</html>

@@ -196,7 +196,6 @@ footer{padding-block:36px 56px;border-top:1px solid var(--rule);color:var(--mute
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9 1.5V5h4M6 8.5h5M6 11h5"/></svg>arXiv</a>
     <a class="btn ghost" href="https://arxiv.org/pdf/2610.05306" target="_blank" rel="noopener">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 1.5v9M4.5 7 8 10.5 11.5 7M2.5 13.5h11"/></svg>PDF</a>
-    <a class="btn ghost" href="#bibtex">BibTeX</a>
   </div>
 
   <div class="explorer stage">
@@ -385,6 +384,8 @@ footer{padding-block:36px 56px;border-top:1px solid var(--rule);color:var(--mute
 </div>
 </section>
 
+<!-- BibTeX hidden until the ACM DL entry exists. To restore: uncomment this block and
+     put back <a class="btn ghost" href="#bibtex">BibTeX</a> in the .links row above.
 <section class="wrap" id="bibtex">
   <div class="bib-head"><h2>BibTeX</h2><button type="button" class="btn ghost" id="copy-bib">Copy</button></div>
 <pre class="bib" id="bib">@inproceedings{liu2026kinematics,
@@ -402,6 +403,7 @@ footer{padding-block:36px 56px;border-top:1px solid var(--rule);color:var(--mute
   primaryClass  = {cs.CV}
 }</pre>
 </section>
+-->
 </main>
 
 <footer class="wrap">
@@ -668,7 +670,7 @@ document.querySelectorAll('[role="tab"]').forEach(b=>b.addEventListener("click",
 }));
 
 /* ---------- BibTeX copy ---------- */
-$("#copy-bib").addEventListener("click",async()=>{
+$("#copy-bib")?.addEventListener("click",async()=>{
   const b=$("#copy-bib");
   try{await navigator.clipboard.writeText($("#bib").textContent);b.textContent="Copied";}
   catch(e){const r=document.createRange();r.selectNodeContents($("#bib"));const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent="Selected, press Ctrl+C";}
